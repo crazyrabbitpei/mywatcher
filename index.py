@@ -70,6 +70,7 @@ async def main(*, rds, es):
     keyword_ids = tuple(KEYWORD_INFO.keys())
     logger.debug(keyword_ids)
     if len(keyword_ids) == 0:
+        clean_result()
         return
 
     now = datetime.now()
