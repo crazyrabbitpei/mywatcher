@@ -69,9 +69,9 @@ async def main(*, rds, es):
         raise
     else:
         create_post_and_keyword_info(result)
-        logger.debug(KEYWORD_INFO)
 
     keyword_ids = tuple(KEYWORD_INFO.keys())
+    logger.debug(keyword_ids)
     if len(keyword_ids) == 0:
         return
     # rds查詢關鍵字訂閱者
