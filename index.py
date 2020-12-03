@@ -5,6 +5,9 @@ from yaml import safe_load, safe_dump
 from dotenv import load_dotenv
 load_dotenv()
 
+import pytz
+tw_tz = pytz.timezone('Asia/Taipei')
+from datetime import datetime, timedelta, timezone
 import os, sys
 import httpx
 import asyncio
@@ -33,7 +36,8 @@ KEYWORD_VALUE = {} # keyword_id和keyword名的對應
 
 loop = asyncio.get_event_loop()
 
-async def main(*, rds, es):
+
+async def main(*, rds, es, last_time):
     # 拿取rds關鍵字清單
     try:
         result = rds.get_subcribed_keywords()
@@ -46,8 +50,8 @@ async def main(*, rds, es):
         KEYWORD_VALUE = dict(keyword_infos)
 
     # es查詢關鍵字結果
-
-    tasks = [asyncio.create_task(es.find(keyword_id, keyword)) for keyword_id, keyword in keyword_infos]
+    logging.debug(f'Search time greater then {last_time}')
+    tasks = [asyncio.create_task(es.find(keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
 
     try:
         result = await asyncio.gather(*tasks)
@@ -122,9 +126,12 @@ if __name__ == '__main__':
         logging.error('es連線失敗', exc_info=True)
         sys.exit(0)
 
+    now = None
     while True:
         try:
-            loop.run_until_complete(main(rds=rds, es=es))
+            last_time = now
+            now = str((datetime.now(timezone.utc) + timedelta(seconds=8*60*60)).replace(tzinfo=tw_tz))
+            loop.run_until_complete(main(rds=rds, es=es, last_time=last_time))
             #asyncio.run(main(rds=rds, es=es))
         except:
             logger.error('系統運行失敗', exc_info=True)
