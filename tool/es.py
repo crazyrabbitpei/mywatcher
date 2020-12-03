@@ -1,5 +1,8 @@
 from .ptt import parse_post_basic_info
 from elasticsearch import Elasticsearch, AsyncElasticsearch
+import logging, os
+logger = logging.getLogger(__name__)
+logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 class Es:
     client = None
@@ -20,7 +23,7 @@ class Es:
             port=port,
         )
 
-    async def find(self, keyword_id, keyword, last_time='now-10m'):
+    async def find(self, keyword_id, keyword, last_time):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
@@ -41,7 +44,6 @@ class Es:
                             'range': {
                                 'time': {
                                     'gte': f'{last_time}',
-                                    #'gte': '2020-12-03T22:22:17.548039+08:00',
                                 }
                             }
                         }
@@ -49,6 +51,5 @@ class Es:
                 }
             }
         }
-
         result = await self.client.search(body=body)
         return parse_post_basic_info(keyword_id, keyword, result)
