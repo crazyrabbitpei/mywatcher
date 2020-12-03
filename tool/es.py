@@ -40,7 +40,7 @@ class Es:
                         {
                             'range': {
                                 'time': {
-                                    'gte': last_time,
+                                    'gte': f'{last_time}',
                                 }
                             }
                         }

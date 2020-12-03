@@ -34,10 +34,13 @@ POST_INFO = {} # 文章和細節
 KEYWORD_INFO = defaultdict(list)  # keyword_id和有該keyword的文章對應
 KEYWORD_VALUE = {} # keyword_id和keyword名的對應
 
+NOW = None
+
 loop = asyncio.get_event_loop()
 
 
-async def main(*, rds, es, last_time):
+async def main(*, rds, es):
+    global NOW
     # 拿取rds關鍵字清單
     try:
         result = rds.get_subcribed_keywords()
@@ -49,9 +52,12 @@ async def main(*, rds, es, last_time):
         keyword_infos = tuple(zip(keyword_ids, keywords))
         KEYWORD_VALUE = dict(keyword_infos)
 
+    last_time = NOW
+    NOW = str((datetime.now(timezone.utc) + timedelta(seconds=8*60*60)).replace(tzinfo=tw_tz))
     # es查詢關鍵字結果
-    logging.debug(f'Search time greater then {last_time}')
-    tasks = [asyncio.create_task(es.find(keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
+    logger.debug(f'Search time greater then {last_time}')
+    tasks = [asyncio.create_task(es.find(
+        keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
 
     try:
         result = await asyncio.gather(*tasks)
@@ -62,9 +68,12 @@ async def main(*, rds, es, last_time):
     else:
         create_post_and_keyword_info(result)
 
+    keyword_ids = tuple(KEYWORD_INFO.keys())
+    if len(keyword_ids) == 0:
+        return
     # rds查詢關鍵字訂閱者
     try:
-        result = rds.get_user_keyword_info_to_be_noticed(tuple(KEYWORD_INFO.keys()))
+        result = rds.get_user_keyword_info_to_be_noticed(keyword_ids)
     except:
         logger.error('搜尋訂閱使用者失敗')
         raise
@@ -83,7 +92,7 @@ async def main(*, rds, es, last_time):
         raise
 
     logger.info(result)
-    await asyncio.sleep(config['WATCHER']['interval'])
+    await asyncio.sleep(int(config['WATCHER']['interval']))
 
 def create_post_and_keyword_info(result):
     '''
@@ -129,9 +138,8 @@ if __name__ == '__main__':
     now = None
     while True:
         try:
-            last_time = now
-            now = str((datetime.now(timezone.utc) + timedelta(seconds=8*60*60)).replace(tzinfo=tw_tz))
-            loop.run_until_complete(main(rds=rds, es=es, last_time=last_time))
+
+            loop.run_until_complete(main(rds=rds, es=es))
             #asyncio.run(main(rds=rds, es=es))
         except:
             logger.error('系統運行失敗', exc_info=True)
