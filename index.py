@@ -53,7 +53,9 @@ async def main(*, rds, es):
         KEYWORD_VALUE = dict(keyword_infos)
 
     last_time = NOW
-    NOW = str((datetime.now(timezone.utc) + timedelta(seconds=8*60*60)).replace(tzinfo=tw_tz))
+    now = datetime.now()
+    tw_now = now.astimezone(tw_tz)
+    NOW = tw_now.isoformat()
     # es查詢關鍵字結果
     logger.debug(f'Search time greater then {last_time}')
     tasks = [asyncio.create_task(es.find(
