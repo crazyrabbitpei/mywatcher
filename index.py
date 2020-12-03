@@ -53,9 +53,6 @@ async def main(*, rds, es):
         KEYWORD_VALUE = dict(keyword_infos)
 
     last_time = NOW
-    now = datetime.now()
-    tw_now = now.astimezone(tw_tz)
-    NOW = tw_now.isoformat()
     # es查詢關鍵字結果
     logger.debug(f'Search time greater then {last_time}')
     tasks = [asyncio.create_task(es.find(
@@ -74,6 +71,10 @@ async def main(*, rds, es):
     logger.debug(keyword_ids)
     if len(keyword_ids) == 0:
         return
+
+    now = datetime.now()
+    tw_now = now.astimezone(tw_tz)
+    NOW = tw_now.isoformat()
     # rds查詢關鍵字訂閱者
     try:
         result = rds.get_user_keyword_info_to_be_noticed(keyword_ids)
