@@ -122,7 +122,7 @@ def create_user_notice_info(result):
 
 if __name__ == '__main__':
     try:
-        rds = Rds(dbname=os.getenv('RDS_DBNAME'), user=os.getenv(
+        rds = Rds(host=os.getenv('RDS_HOST'), dbname=os.getenv('RDS_DBNAME'), user=os.getenv(
             'RDS_USER'), password=os.getenv('RDS_PASSWD'))
     except:
         logging.error('rds連線失敗', exc_info=True)
