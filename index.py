@@ -96,7 +96,19 @@ async def main(*, rds, es):
         raise
 
     logger.info(result)
+    clean_result()
     await asyncio.sleep(int(config['WATCHER']['interval']))
+
+
+def clean_result():
+    global USER_NOTICED_INFO # 使用者和要通發送的文章和對應關鍵字
+    USER_NOTICED_INFO = {}
+    global POST_INFO # 文章和細節
+    POST_INFO = {}
+    global KEYWORD_INFO # keyword_id和有該keyword的文章對應
+    KEYWORD_INFO = defaultdict(list)
+    global KEYWORD_VALUE # keyword_id和keyword名的對應
+    KEYWORD_VALUE = {}
 
 def create_post_and_keyword_info(result):
     '''
