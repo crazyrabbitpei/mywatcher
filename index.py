@@ -69,6 +69,7 @@ async def main(*, rds, es):
         raise
     else:
         create_post_and_keyword_info(result)
+        logger.debug(KEYWORD_INFO)
 
     keyword_ids = tuple(KEYWORD_INFO.keys())
     if len(keyword_ids) == 0:
@@ -81,10 +82,10 @@ async def main(*, rds, es):
         raise
     else:
         create_user_notice_info(result)
-
+        logger.debug(USER_NOTICED_INFO)
     # 發送訂閱內容
     messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_INFO, KEYWORD_VALUE), post_info=POST_INFO)
-
+    logger.debug(messages)
     tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
     try:
