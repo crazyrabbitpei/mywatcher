@@ -34,7 +34,7 @@ POST_INFO = {} # 文章和細節
 KEYWORD_INFO = defaultdict(list)  # keyword_id和有該keyword的文章對應
 KEYWORD_VALUE = {} # keyword_id和keyword名的對應
 
-NOW = None
+NOW = 'now-10m'
 
 loop = asyncio.get_event_loop()
 
