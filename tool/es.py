@@ -20,7 +20,7 @@ class Es:
             port=port,
         )
 
-    async def find(self, keyword_id, keyword):
+    async def find(self, keyword_id, keyword, last_time='now-5s'):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
@@ -40,7 +40,7 @@ class Es:
                         {
                             'range': {
                                 'time': {
-                                    'gte': 'now-7d'
+                                    'gte': last_time,
                                 }
                             }
                         }
