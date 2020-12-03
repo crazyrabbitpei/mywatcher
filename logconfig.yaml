@@ -1,0 +1,36 @@
+version: 1
+formatters:
+  brief:
+    format: '%(asctime)s %(name)s - %(levelname)s:%(message)s'
+  precise:
+    format: '%(asctime)s %(name)s %(funcName)s  - %(levelname)s:%(message)s'
+  test:
+    format: '%(levelname)s:%(message)s'
+handlers:
+  console:
+    class : logging.StreamHandler
+    formatter: brief
+    level   : DEBUG
+    filters: []
+    stream  : ext://sys.stdout
+  file:
+    class : logging.handlers.TimedRotatingFileHandler
+    formatter: brief
+    level   : DEBUG
+    filename: logs/pttwatcher.log
+    when: d
+    interval: 1
+    backupCount: 3
+  test:
+    class: logging.StreamHandler
+    formatter: test
+    level: DEBUG
+    stream: ext://sys.stdout
+loggers:
+  mylogger:
+    level: DEBUG
+    handlers: [test]
+    propagate: no
+root:
+  level: INFO
+  handlers: [console, file]
