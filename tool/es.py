@@ -18,7 +18,7 @@ class Es:
 
     def __init__(self, hosts=None, port=443, region=os.getenv('ES_REGION')):
         credentials = boto3.Session().get_credentials()
-        if credentials:
+        if credentials and os.environ.get('AUTH', 'aws') != 'aws':
             logger.info('Connect Es by aws auth')
             from requests_aws4auth import AWS4Auth
             auth = AWS4Auth(credentials.access_key, credentials.secret_key,
