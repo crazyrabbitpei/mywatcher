@@ -26,7 +26,7 @@ with open('logconfig.yaml', 'r') as f:
     log_config = safe_load(f)
     logging.config.dictConfig(log_config)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 USER_NOTICED_INFO = {} # 使用者和要通發送的文章和對應關鍵字
@@ -52,7 +52,12 @@ async def main(*, rds, es):
         keyword_infos = tuple(zip(keyword_ids, keywords))
         KEYWORD_VALUE = dict(keyword_infos)
 
+    logger.debug(keyword_infos)
+
     last_time = NOW
+    now = datetime.now()
+    tw_now = now.astimezone(tw_tz)
+    NOW = tw_now.isoformat()
     # es查詢關鍵字結果
     logger.debug(f'Search time greater then {last_time}')
     tasks = [asyncio.create_task(es.find(
@@ -73,9 +78,7 @@ async def main(*, rds, es):
         clean_result()
         return
 
-    now = datetime.now()
-    tw_now = now.astimezone(tw_tz)
-    NOW = tw_now.isoformat()
+
     # rds查詢關鍵字訂閱者
     try:
         result = rds.get_user_keyword_info_to_be_noticed(keyword_ids)
@@ -147,7 +150,7 @@ if __name__ == '__main__':
 
     try:
         es = Es(hosts=os.getenv(
-            'ES_HOSTS').split(','))
+            'ES_HOSTS').split(','), port=os.getenv('ES_PORT'))
     except:
         logging.error('es連線失敗', exc_info=True)
         sys.exit(0)
