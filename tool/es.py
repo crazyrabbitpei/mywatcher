@@ -2,7 +2,7 @@ from .ptt import parse_post_basic_info
 from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection
 import boto3
 import logging, os
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 service = 'es'

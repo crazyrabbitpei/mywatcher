@@ -31,6 +31,6 @@ loggers:
     level: DEBUG
     handlers: [test]
     propagate: no
-root:
-  level: INFO
-  handlers: [console, file]
+  root:
+    level: INFO
+    handlers: [console, file]

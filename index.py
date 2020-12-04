@@ -27,7 +27,7 @@ with open('logconfig.yaml', 'r') as f:
     log_config = safe_load(f)
     logging.config.dictConfig(log_config)
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 USER_NOTICED_INFO = {} # 使用者和要通發送的文章和對應關鍵字
@@ -159,7 +159,6 @@ if __name__ == '__main__':
     now = None
     while True:
         try:
-
             loop.run_until_complete(main(rds=rds, es=es))
             #asyncio.run(main(rds=rds, es=es))
         except:
