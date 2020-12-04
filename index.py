@@ -146,7 +146,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     try:
-        es = Es(http_auth=(os.getenv('ES_USER'), os.getenv("ES_PASSWD")), hosts=os.getenv(
+        es = Es(hosts=os.getenv(
             'ES_HOSTS').split(','))
     except:
         logging.error('es連線失敗', exc_info=True)
