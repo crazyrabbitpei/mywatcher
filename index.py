@@ -27,6 +27,9 @@ with open('logconfig.yaml', 'r') as f:
     log_config = safe_load(f)
     logging.config.dictConfig(log_config)
 
+
+es_log = logging.getLogger("elasticsearch")
+es_log.setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
