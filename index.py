@@ -13,6 +13,7 @@ import httpx
 import asyncio
 from collections import defaultdict
 
+import tool.auth as Auth
 from tool.rds import Rds
 from tool.es import Es
 from tool.line import push_message
@@ -149,8 +150,8 @@ if __name__ == '__main__':
         sys.exit(0)
 
     try:
-        es = Es(hosts=os.getenv(
-            'ES_HOSTS').split(','), port=os.getenv('ES_PORT'))
+        auth = Auth.get()
+        es = Es(auth=auth, hosts=os.getenv('ES_HOSTS').split(','), port=os.getenv('ES_PORT'), region=os.getenv('ES_REGION'))
     except:
         logging.error('es連線失敗', exc_info=True)
         sys.exit(0)

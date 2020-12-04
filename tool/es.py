@@ -16,17 +16,7 @@ class Es:
 
     ]
 
-    def __init__(self, hosts=None, port=443, region=os.getenv('ES_REGION')):
-        credentials = boto3.Session().get_credentials()
-        if credentials and os.environ.get('AUTH', 'aws') == 'aws':
-            logger.info('Connect Es by aws auth')
-            from requests_aws4auth import AWS4Auth
-            auth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                            region, service, session_token=credentials.token)
-        else:
-            logger.info('Connect Es by basic auth')
-            auth = (os.getenv('ES_USER'), os.getenv("ES_PASSWD"))
-
+    def __init__(self, *, auth, hosts=None, port=443, region=None):
         self.client = AsyncElasticsearch(
             http_auth=auth,
             hosts=hosts or ['127.0.0.1'],
