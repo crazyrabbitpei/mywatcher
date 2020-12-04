@@ -77,6 +77,7 @@ async def main(*, rds, es):
     logger.debug(keyword_ids)
     if len(keyword_ids) == 0:
         clean_result()
+        await asyncio.sleep(int(config['WATCHER']['interval']))
         return
 
 
