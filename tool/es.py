@@ -1,15 +1,11 @@
 from .ptt import parse_post_basic_info
-from elasticsearch import Elasticsearch, AsyncElasticsearch
+from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection
 import boto3
 import logging, os
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
-
-host = os.getenv('ES_HOST')
-region = os.getenv('ES_REGION')  # e.g. us-west-1
 service = 'es'
-auth = None
 
 class Es:
     client = None
@@ -19,8 +15,8 @@ class Es:
     patterns = [
 
     ]
-    def __init__(self, hosts=None, port=443):
 
+    def __init__(self, hosts=None, port=443, region=os.getenv('ES_REGION')):
         credentials = boto3.Session().get_credentials()
         if credentials:
             logger.info('Connect Es by aws auth')
@@ -39,6 +35,7 @@ class Es:
             ssl_show_warn=False,
             scheme='https',
             port=port,
+            connection_class=RequestsHttpConnection,
         )
 
     async def find(self, keyword_id, keyword, last_time):
@@ -69,5 +66,6 @@ class Es:
                 }
             }
         }
+
         result = await self.client.search(body=body)
         return parse_post_basic_info(keyword_id, keyword, result)
