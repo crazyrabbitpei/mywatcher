@@ -8,7 +8,7 @@ region = os.getenv('ES_REGION')
 
 def get():
     credentials = boto3.Session().get_credentials()
-    if credentials and os.environ.get('AUTH', 'aws') == 'aws':
+    if credentials and os.environ.get('AUTH', 'basic') == 'aws':
         logger.info('Get by aws auth')
         from requests_aws4auth import AWS4Auth
         auth = AWS4Auth(credentials.access_key, credentials.secret_key,
