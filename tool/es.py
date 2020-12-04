@@ -11,16 +11,6 @@ region = os.getenv('ES_REGION')  # e.g. us-west-1
 service = 'es'
 auth = None
 
-credentials = boto3.Session().get_credentials()
-if credentials:
-    logger.info('Connect Es by aws auth')
-    from requests_aws4auth import AWS4Auth
-    auth = AWS4Auth(credentials.access_key, credentials.secret_key,
-                    region, service, session_token=credentials.token)
-else:
-    logger.info('Connect Es by basic auth')
-    auth = (os.getenv('ES_USER'), os.getenv("ES_PASSWD"))
-
 class Es:
     client = None
     filters = [
