@@ -21,7 +21,7 @@ class Es:
             http_auth=auth,
             hosts=hosts or ['127.0.0.1'],
             use_ssl=True,
-            verify_cert=False,
+            verify_cert=True,
             ssl_show_warn=False,
             scheme='https',
             port=port,
