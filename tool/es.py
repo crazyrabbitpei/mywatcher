@@ -1,5 +1,5 @@
 from .ptt import parse_post_basic_info
-from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection
+from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection
 import boto3
 import logging, os
 logger = logging.getLogger()
@@ -35,7 +35,7 @@ class Es:
             ssl_show_warn=False,
             scheme='https',
             port=port,
-            connection_class=RequestsHttpConnection,
+            connection_class=AIOHttpConnection,
         )
 
     async def find(self, keyword_id, keyword, last_time):
