@@ -26,6 +26,9 @@ class Es:
             scheme='https',
             port=port,
             connection_class=AIOHttpConnection,
+            timeout=60,
+            max_retries=10,
+            retry_on_timeout=True
         )
 
     async def find(self, index, keyword_id, keyword, last_time):
