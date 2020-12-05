@@ -62,7 +62,7 @@ async def main(*, rds, es):
 
     # es查詢關鍵字結果
     logger.debug(f'Search time greater then {last_time}')
-    tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
+    tasks = [asyncio.create_task(es.find(os.getenv('ES_INDEX'), keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
 
     try:
         result = await asyncio.gather(*tasks)
