@@ -28,7 +28,7 @@ class Es:
             connection_class=AIOHttpConnection,
         )
 
-    async def find(self, keyword_id, keyword, last_time):
+    async def find(self, index, keyword_id, keyword, last_time):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
@@ -57,5 +57,5 @@ class Es:
             }
         }
 
-        result = await self.client.search(body=body)
+        result = await self.client.search(index=index, body=body)
         return parse_post_basic_info(keyword_id, keyword, result)
