@@ -13,7 +13,7 @@ def format_push_message(*, user_notice: dict, keyword_info: tuple, post_info: di
         user_keyword_count = defaultdict(int)
         for index, (post_id, keyword_ids) in enumerate(items):
             keywords = build_keywords(keyword_ids, keyword_info, user_keyword_count)
-            msg += '[{index}]{category} {title}\n關鍵字: {keywords}\n發文時間: {time}\n{url}\n'.format(index=index+1, keywords=keywords, **post_info[post_id])
+            msg += '{index}) [{category}] {title}\n關鍵字: {keywords}\n發文時間: {time}\n{url}\n'.format(index=index+1, keywords=keywords, **post_info[post_id])
 
         keyword_count_msg = ', '.join([f'{key}({count})' for key, count in user_keyword_count.items()])
         title += f', {keyword_count_msg}'
