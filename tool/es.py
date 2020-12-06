@@ -21,14 +21,13 @@ class Es:
 
     ]
 
-    def __init__(self, *, auth, hosts=None, port=443, region=None):
+    def __init__(self, *, auth, hosts=None, port=443, region=None, is_test=False):
         self.client = AsyncElasticsearch(
             http_auth=auth,
             hosts=hosts or ['127.0.0.1'],
-            use_ssl=True,
-            verify_cert=True,
-            ssl_show_warn=False,
-            scheme='https',
+            use_ssl=not is_test,
+            verify_cert=not is_test,
+            ssl_show_warn=not is_test,
             port=port,
             connection_class=AIOHttpConnection,
             timeout=int(config['REQUEST']['timeout']),
@@ -36,11 +35,20 @@ class Es:
             retry_on_timeout=True
         )
 
-    async def find(self, index, keyword_id, keyword, last_time):
+    async def find(self, *, index, keyword_id, keyword, last_time, is_test=False):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
-        body = {
+
+        body = gen_bod(keyword=keyword, last_time=last_time, is_test=is_test)
+
+        result = await self.client.search(index=index, body=body)
+        return parse_post_basic_info(keyword_id, keyword, result)
+
+
+def gen_bod(*, keyword, last_time, is_test=False):
+    if not is_test:
+        return {
             "sort": [
                 {
                     "time": {
@@ -71,6 +79,10 @@ class Es:
                 }
             }
         }
-
-        result = await self.client.search(index=index, body=body)
-        return parse_post_basic_info(keyword_id, keyword, result)
+    else:
+        return {
+            "size": 5,
+            "query": {
+                "match_all": {}
+            }
+        }

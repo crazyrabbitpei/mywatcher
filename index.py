@@ -9,8 +9,10 @@ import pytz
 tw_tz = pytz.timezone('Asia/Taipei')
 from datetime import datetime, timedelta, timezone
 import os, sys
+import json
 import httpx
 import asyncio
+import argparse
 from collections import defaultdict
 
 import tool.auth as Auth
@@ -43,8 +45,9 @@ NOW = 'now-10m'
 loop = asyncio.get_event_loop()
 
 
-async def main(*, rds, es):
+async def main(*, rds, es, is_test=False):
     global NOW
+    last_time = NOW
     # 拿取rds關鍵字清單
     try:
         result = rds.get_subcribed_keywords()
@@ -56,17 +59,20 @@ async def main(*, rds, es):
         keyword_infos = tuple(zip(keyword_ids, keywords))
         KEYWORD_VALUE = dict(keyword_infos)
 
-    logger.debug(keyword_infos)
+    if is_test:
+        keyword_infos = (keyword_infos[0], )
+        KEYWORD_VALUE = dict(keyword_infos)
+        last_time = 'now-14d'
+        logger.warning(f'目前為測試模式, 會隨便拿一個keyword，實際上也並不會用此key去搜尋文章內容，而是拿最近前5篇文章, 搜尋日期範圍是: {last_time}')
 
-    last_time = NOW
+    logger.debug(keyword_infos)
 
     # es查詢關鍵字結果
     logger.debug(f'Search time greater then {last_time}')
-    tasks = [asyncio.create_task(es.find(os.getenv('ES_INDEX'), keyword_id, keyword, last_time=last_time)) for keyword_id, keyword in keyword_infos]
+    tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
 
     try:
         result = await asyncio.gather(*tasks)
-
     except:
         logging.error('關鍵字搜尋失敗')
         raise
@@ -89,11 +95,17 @@ async def main(*, rds, es):
     except:
         logger.error('搜尋訂閱使用者失敗')
         raise
-    else:
-        create_user_notice_info(result)
-        logger.debug(USER_NOTICED_INFO)
+
+    if is_test:
+        result = [(os.getenv('MY_LINE_TEST_USER'), keyword_ids[0])]
+        logger.warning(f'目前為測試模式, 測試對象為: {os.getenv("MY_LINE_TEST_USER")}, 關鍵字為: {keyword_infos[0][1]}')
+
+    # 產生使用者和訂閱資訊
+    create_user_notice_info(result)
+    logger.debug(USER_NOTICED_INFO)
+
     # 發送訂閱內容
-    messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_INFO, KEYWORD_VALUE), post_info=POST_INFO)
+    messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_INFO, KEYWORD_VALUE), post_info=POST_INFO, is_test=is_test)
     logger.debug(messages)
     tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
@@ -145,6 +157,9 @@ def create_user_notice_info(result):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', action='store_true', help='測試模式狀態會隨便拿取一個keyword並且拿取最近前五篇文章(不會搜尋該keyword)，發送通知對象會是開發者的line。會忽略ssl驗證')
+    args = parser.parse_args()
     try:
         rds = Rds(host=os.getenv('RDS_HOST'), dbname=os.getenv('RDS_DBNAME'), user=os.getenv(
             'RDS_USER'), password=os.getenv('RDS_PASSWD'))
@@ -154,7 +169,7 @@ if __name__ == '__main__':
 
     try:
         auth = Auth.get()
-        es = Es(auth=auth, hosts=os.getenv('ES_HOSTS').split(','), port=os.getenv('ES_PORT'), region=os.getenv('ES_REGION'))
+        es = Es(auth=auth, hosts=os.getenv('ES_HOSTS').split(','), port=os.getenv('ES_PORT'), region=os.getenv('ES_REGION'), is_test=args.test)
     except:
         logging.error('es連線失敗', exc_info=True)
         sys.exit(0)
@@ -162,10 +177,13 @@ if __name__ == '__main__':
     now = None
     while True:
         try:
-            loop.run_until_complete(main(rds=rds, es=es))
+            loop.run_until_complete(main(rds=rds, es=es, is_test=args.test))
             #asyncio.run(main(rds=rds, es=es))
         except:
             logger.error('系統運行失敗', exc_info=True)
+            break
+
+        if args.test:
             break
 
     loop.close()

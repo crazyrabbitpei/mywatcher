@@ -1,9 +1,14 @@
 from collections import defaultdict
-def format_push_message(*, user_notice: dict, keyword_info: tuple, post_info: dict):
+
+
+def format_push_message(*, user_notice: dict, keyword_info: tuple, post_info: dict, is_test=False):
     result = {}
     for user_id, post_with_keywords in user_notice.items():
         items = post_with_keywords.items()
-        title = f'您有 {len(items)} 筆通知結果'
+        if is_test:
+            title = f'[測試]您有 {len(items)} 筆通知結果'
+        else:
+            title = f'您有 {len(items)} 筆通知結果'
         msg = ''
         user_keyword_count = defaultdict(int)
         for index, (post_id, keyword_ids) in enumerate(items):
