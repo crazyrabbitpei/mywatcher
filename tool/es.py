@@ -1,7 +1,12 @@
 from .ptt import parse_post_basic_info
 from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection
 import boto3
+import configparser
 import logging, os
+
+config = configparser.ConfigParser()
+config.read(os.environ.get('SETTING', 'settings.ini'))
+
 logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
@@ -26,8 +31,8 @@ class Es:
             scheme='https',
             port=port,
             connection_class=AIOHttpConnection,
-            timeout=60,
-            max_retries=10,
+            timeout=int(config['REQUEST']['timeout']),
+            max_retries=int(config['REQUEST']['max_retries']),
             retry_on_timeout=True
         )
 
