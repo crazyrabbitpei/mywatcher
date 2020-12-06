@@ -41,13 +41,20 @@ class Es:
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
         body = {
+            "sort": [
+                {
+                    "time": {
+                        "order": "desc"
+                    }
+                }
+            ],
             'query': {
                 'bool': {
                     'must': [
                         {
-                            'match': {
+                            'match_phrase': {
                                 'content': {
-                                    'operator': 'and', 'query': keyword
+                                    'query': keyword
                                 }
                             }
                         }
