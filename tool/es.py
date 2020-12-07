@@ -3,6 +3,7 @@ from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnect
 import boto3
 import configparser
 import logging, os
+import json
 
 config = configparser.ConfigParser()
 config.read(os.environ.get('SETTING', 'settings.ini'))
@@ -44,7 +45,8 @@ class Es:
         try:
             result = await self.client.search(index=index, body=body)
         except TransportError as e:
-            raise TransportError(e)
+            logger.error(f'搜尋失敗: {json.dumps(body)}')
+            raise
 
         return parse_post_basic_info(keyword_id, keyword, result)
 
