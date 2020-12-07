@@ -43,7 +43,7 @@ class Es:
         body = gen_body(index=index, keywords=list(zip(*keyword_infos))[1], last_time=last_time, is_test=is_test)
 
         try:
-            result = await self.client.msearch(index=index, body=body)
+            result = await self.client.msearch(index=index, body=body, max_concurrent_shard_requests=1)
         except TransportError as e:
             logger.error(f'搜尋失敗: {json.dumps(body)}')
             raise
