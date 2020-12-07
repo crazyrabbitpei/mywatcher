@@ -43,12 +43,12 @@ class Es:
         body = gen_body(index=index, keywords=list(zip(*keyword_infos))[1], last_time=last_time, is_test=is_test)
 
         try:
-            took, responses = await self.client.msearch(index=index, body=body)
+            result = await self.client.msearch(index=index, body=body)
         except TransportError as e:
             logger.error(f'搜尋失敗: {json.dumps(body)}')
             raise
 
-        data = tuple(zip(responses, keyword_infos))
+        data = tuple(zip(result['responses'], keyword_infos))
         return parse_post_basic_info(data)
 
 
