@@ -72,10 +72,8 @@ async def main(*, rds, es, is_test=False):
     retry = True
     while retry:
         logger.debug(f'Search time greater then {last_time}')
-        tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
-
         try:
-            result = await asyncio.gather(*tasks)
+            result = await asyncio.gather(es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, last_time=last_time, is_test=is_test))
         except elasticsearch.TransportError as e:
             logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
             logger.error(f"{int(config['REQUEST']['retry_after'])} 秒後重新搜尋")
@@ -86,6 +84,23 @@ async def main(*, rds, es, is_test=False):
         else:
             create_post_and_keyword_info(result)
             retry = False
+    # retry = True
+    # while retry:
+    #     logger.debug(f'Search time greater then {last_time}')
+    #     tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
+
+    #     try:
+    #         result = await asyncio.gather(*tasks)
+    #     except elasticsearch.TransportError as e:
+    #         logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
+    #         logger.error(f"{int(config['REQUEST']['retry_after'])} 秒後重新搜尋")
+    #         time.sleep(int(config['REQUEST']['retry_after']))
+    #     except:
+    #         logging.error('關鍵字搜尋失敗')
+    #         raise
+    #     else:
+    #         create_post_and_keyword_info(result)
+    #         retry = False
 
     keyword_ids = tuple(KEYWORD_INFO.keys())
     logger.debug(keyword_ids)

@@ -36,24 +36,38 @@ class Es:
             retry_on_timeout=True
         )
 
-    async def find(self, *, index, keyword_id, keyword, last_time, is_test=False):
+    async def find(self, *, index, keyword_infos, last_time, is_test=False):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
-        body = gen_body(keyword=keyword, last_time=last_time, is_test=is_test)
+        body = gen_body(index=index, keywords=list(zip(*keyword_infos))[1], last_time=last_time, is_test=is_test)
 
         try:
-            result = await self.client.search(index=index, body=body)
+            took, responses = await self.client.msearch(index=index, body=body)
         except TransportError as e:
             logger.error(f'搜尋失敗: {json.dumps(body)}')
             raise
 
-        return parse_post_basic_info(keyword_id, keyword, result)
+        data = tuple(zip(responses, keyword_infos))
+        return parse_post_basic_info(data)
 
 
-def gen_body(*, keyword, last_time, is_test=False):
-    if not is_test:
-        return {
+def gen_body(*, index, keywords, last_time, is_test):
+    if is_test:
+        myindex = {'index': index}
+        myquery = {
+            "size": 5,
+            "query": {
+                "match_all": {}
+            }
+        }
+        return f'{json.dumps(myindex)}\n{json.dumps(myquery, ensure_ascii=False)}\n'
+
+    body = ''
+    for keyword in keywords:
+        myindex = {'index': index}
+        myquery = {
+            "size": 150,
             "sort": [
                 {
                     "time": {
@@ -61,18 +75,18 @@ def gen_body(*, keyword, last_time, is_test=False):
                     }
                 }
             ],
-            'query': {
-                'bool': {
-                    'must': [
+            "query": {
+                "bool": {
+                    "must": [
                         {
-                            'match_phrase': {
-                                'content': {
-                                    'query': keyword
+                            "match_phrase": {
+                                "content": {
+                                    "query": keyword,
                                 }
                             }
-                        }
+                        },
                     ],
-                    'filter': [
+                    "filter": [
                         {
                             'range': {
                                 'time': {
@@ -84,10 +98,5 @@ def gen_body(*, keyword, last_time, is_test=False):
                 }
             }
         }
-    else:
-        return {
-            "size": 5,
-            "query": {
-                "match_all": {}
-            }
-        }
+        body += f'{json.dumps(myindex)}\n{json.dumps(myquery, ensure_ascii=False)}\n'
+    return body
