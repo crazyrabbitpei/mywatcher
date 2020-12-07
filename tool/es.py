@@ -39,8 +39,6 @@ class Es:
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
-        ok = False
-        retry = False
         body = gen_body(keyword=keyword, last_time=last_time, is_test=is_test)
 
         try:
@@ -48,7 +46,7 @@ class Es:
         except TransportError as e:
             raise TransportError(e)
 
-        return ok, retry, parse_post_basic_info(keyword_id, keyword, result)
+        return parse_post_basic_info(keyword_id, keyword, result)
 
 
 def gen_body(*, keyword, last_time, is_test=False):
