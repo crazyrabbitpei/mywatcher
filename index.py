@@ -8,9 +8,10 @@ load_dotenv()
 import pytz
 tw_tz = pytz.timezone('Asia/Taipei')
 from datetime import datetime, timedelta, timezone
-import os, sys
+import os, sys, time
 import json
 import httpx
+import elasticsearch
 import asyncio
 import argparse
 from collections import defaultdict
@@ -68,16 +69,23 @@ async def main(*, rds, es, is_test=False):
     logger.debug(keyword_infos)
 
     # es查詢關鍵字結果
-    logger.debug(f'Search time greater then {last_time}')
-    tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
+    retry = True
+    while retry:
+        logger.debug(f'Search time greater then {last_time}')
+        tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
 
-    try:
-        result = await asyncio.gather(*tasks)
-    except:
-        logging.error('關鍵字搜尋失敗')
-        raise
-    else:
-        create_post_and_keyword_info(result)
+        try:
+            result = await asyncio.gather(*tasks)
+        except elasticsearch.TransportError as e:
+            logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
+            logger.error(f"{int(config['REQUEST']['retry_after'])} 秒後重新搜尋")
+            time.sleep(int(config['REQUEST']['retry_after']))
+        except:
+            logging.error('關鍵字搜尋失敗')
+            raise
+        else:
+            create_post_and_keyword_info(result)
+            retry = False
 
     keyword_ids = tuple(KEYWORD_INFO.keys())
     logger.debug(keyword_ids)

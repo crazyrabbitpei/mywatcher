@@ -1,5 +1,5 @@
 from .ptt import parse_post_basic_info
-from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection
+from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection, TransportError
 import boto3
 import configparser
 import logging, os
@@ -39,14 +39,19 @@ class Es:
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
+        ok = False
+        retry = False
+        body = gen_body(keyword=keyword, last_time=last_time, is_test=is_test)
 
-        body = gen_bod(keyword=keyword, last_time=last_time, is_test=is_test)
+        try:
+            result = await self.client.search(index=index, body=body)
+        except TransportError as e:
+            raise TransportError(e)
 
-        result = await self.client.search(index=index, body=body)
-        return parse_post_basic_info(keyword_id, keyword, result)
+        return ok, retry, parse_post_basic_info(keyword_id, keyword, result)
 
 
-def gen_bod(*, keyword, last_time, is_test=False):
+def gen_body(*, keyword, last_time, is_test=False):
     if not is_test:
         return {
             "sort": [
