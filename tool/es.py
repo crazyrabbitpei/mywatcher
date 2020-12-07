@@ -45,11 +45,17 @@ class Es:
         try:
             result = await self.client.msearch(index=index, body=body, max_concurrent_shard_requests=1)
         except TransportError as e:
-            logger.error(f'搜尋失敗: {json.dumps(body)}')
+            logger.error(f'搜尋失敗: {json.dumps(body, ensure_ascii=False)}')
             raise
 
         data = tuple(zip(result['responses'], keyword_infos))
-        return parse_post_basic_info(data)
+        try:
+            result = parse_post_basic_info(data)
+        except:
+            logger.error(f'搜尋結果解析失敗: {json.dumps(data, ensure_ascii=False)}')
+            raise
+
+        return result
 
 
 def gen_body(*, index, keywords, last_time, is_test):
