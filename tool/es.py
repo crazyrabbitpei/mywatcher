@@ -63,6 +63,13 @@ def gen_body(*, index, keywords, last_time, is_test):
         myindex = {'index': index}
         myquery = {
             "size": 5,
+            "sort": [
+                {
+                    "time": {
+                        "order": "desc"
+                    }
+                }
+            ],
             "query": {
                 "match_all": {}
             }
