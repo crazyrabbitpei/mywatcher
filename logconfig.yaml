@@ -18,7 +18,7 @@ handlers:
     formatter: brief
     level   : DEBUG
     filename: logs/pttwatcher.log
-    when: D
+    when: d
     interval: 1
     backupCount: 3
   test:

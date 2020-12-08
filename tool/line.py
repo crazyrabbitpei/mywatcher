@@ -18,6 +18,9 @@ def push_message(*, user_id, message=None):
     '''
     return (ok_or_not:boolean, user_id, status_code, message)
     '''
+    if len(message) > 5000:
+        message = message[:5000]
+
     try:
         line_bot_api.push_message(user_id, TextSendMessage(text=f'{message}'))
     except LineBotApiError as e:
