@@ -101,7 +101,7 @@ def gen_body(*, index, keywords, last_time, is_test):
                     "filter": [
                         {
                             'range': {
-                                'time': {
+                                'fetch_time': {
                                     'gte': f'{last_time}',
                                 }
                             }
