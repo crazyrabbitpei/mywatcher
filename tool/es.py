@@ -29,7 +29,6 @@ class Es:
             use_ssl=not is_test,
             verify_cert=not is_test,
             ssl_show_warn=not is_test,
-            port=port,
             connection_class=AIOHttpConnection,
             timeout=int(config['REQUEST']['timeout']),
             max_retries=int(config['REQUEST']['max_retries']),
