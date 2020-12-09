@@ -113,11 +113,11 @@ async def main(*, rds, es, is_test=False):
     logger.debug(messages)
     tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
-    # try:
-    #     result = await asyncio.gather(*tasks)
-    # except:
-    #     logger.error('主動通知失敗')
-    #     raise
+    try:
+        result = await asyncio.gather(*tasks)
+    except:
+        logger.error('主動通知失敗')
+        raise
 
     logger.info(result)
     clean_result()
