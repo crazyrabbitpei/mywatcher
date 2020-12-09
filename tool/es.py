@@ -87,7 +87,7 @@ def gen_body(*, index, keywords, keyword_last_fetch_time, is_test):
     for keyword in keywords:
         # 該關鍵字有上一次蒐集結果，此次搜尋範圍為上一次搜尋時間之後
         if keyword in keyword_last_fetch_time:
-            last_time = keyword_last_fetch_time[keyword_last_fetch_time]
+            last_time = keyword_last_fetch_time[keyword]
 
         myindex = {'index': index}
         myquery = {
