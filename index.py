@@ -38,17 +38,16 @@ logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 USER_NOTICED_INFO = {} # 使用者和要通發送的文章和對應關鍵字
 POST_INFO = {} # 文章和細節
-KEYWORD_INFO = defaultdict(list)  # keyword_id和有該keyword的文章對應
+KEYWORD_POSTS = defaultdict(list)  # keyword_id和有該keyword的文章對應
 KEYWORD_VALUE = {} # keyword_id和keyword名的對應
-
-NOW = 'now-10m'
+KEYWORD_LAST_FETCH_TIME = {} # 該keyword被蒐集到的最新時間
 
 loop = asyncio.get_event_loop()
 
 
 async def main(*, rds, es, is_test=False):
     global NOW
-    last_time = NOW
+
     # 拿取rds關鍵字清單
     try:
         result = rds.get_subcribed_keywords()
@@ -63,17 +62,17 @@ async def main(*, rds, es, is_test=False):
     if is_test:
         keyword_infos = (keyword_infos[0], )
         KEYWORD_VALUE = dict(keyword_infos)
-        last_time = 'now-14d'
-        logger.warning(f'目前為測試模式, 會隨便拿一個keyword，實際上也並不會用此key去搜尋文章內容，而是拿最近前5篇文章, 搜尋日期範圍是: {last_time}')
+        logger.warning(f'目前為測試模式, 會隨便拿一個keyword，實際上也並不會用此key去搜尋文章內容，而是拿最近前5篇文章')
 
     logger.debug(keyword_infos)
 
     # es查詢關鍵字結果
     retry = True
+    timestamp = None
     while retry:
-        logger.debug(f'Search time greater then {last_time}')
         try:
-            result = await asyncio.gather(es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, last_time=last_time, is_test=is_test))
+            result, timestamp = await es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, keyword_last_fetch_time=KEYWORD_LAST_FETCH_TIME, is_test=is_test)
+
         except elasticsearch.TransportError as e:
             logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
             logger.error(f"{int(config['REQUEST']['retry_after'])} 秒後重新搜尋")
@@ -83,35 +82,18 @@ async def main(*, rds, es, is_test=False):
             raise
         else:
             create_post_and_keyword_info(result)
+            update_keyword_last_fetech_time(result, timestamp)
+
             retry = False
-    # retry = True
-    # while retry:
-    #     logger.debug(f'Search time greater then {last_time}')
-    #     tasks = [asyncio.create_task(es.find(index=os.getenv('ES_INDEX'), keyword_id=keyword_id, keyword=keyword, last_time=last_time, is_test=is_test)) for keyword_id, keyword in keyword_infos]
 
-    #     try:
-    #         result = await asyncio.gather(*tasks)
-    #     except elasticsearch.TransportError as e:
-    #         logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
-    #         logger.error(f"{int(config['REQUEST']['retry_after'])} 秒後重新搜尋")
-    #         time.sleep(int(config['REQUEST']['retry_after']))
-    #     except:
-    #         logging.error('關鍵字搜尋失敗')
-    #         raise
-    #     else:
-    #         create_post_and_keyword_info(result)
-    #         retry = False
-
-    keyword_ids = tuple(KEYWORD_INFO.keys())
+    keyword_ids = tuple(KEYWORD_POSTS.keys())
     logger.debug(keyword_ids)
+    # 沒有任何關鍵字結果
     if len(keyword_ids) == 0:
         clean_result()
         await asyncio.sleep(int(config['WATCHER']['interval']))
         return
 
-    now = datetime.now()
-    tw_now = now.astimezone(tw_tz)
-    NOW = tw_now.isoformat()
     # rds查詢關鍵字訂閱者
     try:
         result = rds.get_user_keyword_info_to_be_noticed(keyword_ids)
@@ -128,7 +110,7 @@ async def main(*, rds, es, is_test=False):
     logger.debug(USER_NOTICED_INFO)
 
     # 發送訂閱內容
-    messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_INFO, KEYWORD_VALUE), post_info=POST_INFO, is_test=is_test)
+    messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_POSTS, KEYWORD_VALUE), post_info=POST_INFO, is_test=is_test)
     logger.debug(messages)
     tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
@@ -148,22 +130,31 @@ def clean_result():
     USER_NOTICED_INFO = {}
     global POST_INFO # 文章和細節
     POST_INFO = {}
-    global KEYWORD_INFO # keyword_id和有該keyword的文章對應
-    KEYWORD_INFO = defaultdict(list)
+    global KEYWORD_POSTS # keyword_id和有該keyword的文章對應
+    KEYWORD_POSTS = defaultdict(list)
     global KEYWORD_VALUE # keyword_id和keyword名的對應
     KEYWORD_VALUE = {}
 
 def create_post_and_keyword_info(result):
     '''
     POST_INFO: dict, {post_id1: {category, title, time, url, keyword_id}, post_id2: {category, title, time, url, keyword_id}, ...}
-    KEYWORD_INFO: dict(list), {keyword_id1: [post_id1, post_id2, ...], keyword_id2: [post_id1, post_id2, ...], ...}
+    KEYWORD_POSTS: dict(list), {keyword_id1: [post_id1, post_id2, ...], keyword_id2: [post_id1, post_id2, ...], ...}
     '''
     for r in result:
         for post_id, info in r.items():
             if post_id not in POST_INFO:
                 POST_INFO[post_id] = info
             keyword_id = info['keyword_id']
-            KEYWORD_INFO[keyword_id].append(post_id)
+            KEYWORD_POSTS[keyword_id].append(post_id)
+
+def update_keyword_last_fetech_time(result, timestamp):
+    '''
+    KEYWORD_LAST_FETCH_TIME: dict, {keyword: last_fetch_time}
+    '''
+    for r in result:
+        for post_id, info in r.items():
+            keyword_id = info['keyword_id']
+            KEYWORD_LAST_FETCH_TIME[KEYWORD_VALUE[keyword_id]] = timestamp
 
 
 def create_user_notice_info(result):
@@ -173,7 +164,7 @@ def create_user_notice_info(result):
     for user_id, keyword_id in result:
         if user_id not in USER_NOTICED_INFO:
             USER_NOTICED_INFO[user_id] = {}
-        for post_id in KEYWORD_INFO[keyword_id]:
+        for post_id in KEYWORD_POSTS[keyword_id]:
             if post_id not in USER_NOTICED_INFO[user_id]:
                 USER_NOTICED_INFO[user_id][post_id] = []
             USER_NOTICED_INFO[user_id][post_id].append(keyword_id)
