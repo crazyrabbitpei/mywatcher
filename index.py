@@ -46,7 +46,7 @@ loop = asyncio.get_event_loop()
 
 
 async def main(*, rds, es, is_test=False):
-    global NOW
+    global KEYWORD_VALUE
 
     # 拿取rds關鍵字清單
     try:
@@ -83,7 +83,6 @@ async def main(*, rds, es, is_test=False):
         else:
             create_post_and_keyword_info(result)
             update_keyword_last_fetech_time(result, timestamp)
-
             retry = False
 
     keyword_ids = tuple(KEYWORD_POSTS.keys())
@@ -114,11 +113,11 @@ async def main(*, rds, es, is_test=False):
     logger.debug(messages)
     tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
-    try:
-        result = await asyncio.gather(*tasks)
-    except:
-        logger.error('主動通知失敗')
-        raise
+    # try:
+    #     result = await asyncio.gather(*tasks)
+    # except:
+    #     logger.error('主動通知失敗')
+    #     raise
 
     logger.info(result)
     clean_result()
@@ -140,22 +139,19 @@ def create_post_and_keyword_info(result):
     POST_INFO: dict, {post_id1: {category, title, time, url, keyword_id}, post_id2: {category, title, time, url, keyword_id}, ...}
     KEYWORD_POSTS: dict(list), {keyword_id1: [post_id1, post_id2, ...], keyword_id2: [post_id1, post_id2, ...], ...}
     '''
-    for r in result:
-        for post_id, info in r.items():
-            if post_id not in POST_INFO:
-                POST_INFO[post_id] = info
-            keyword_id = info['keyword_id']
-            KEYWORD_POSTS[keyword_id].append(post_id)
+    for post_id, info in result.items():
+        if post_id not in POST_INFO:
+            POST_INFO[post_id] = info
+        keyword_id = info['keyword_id']
+        KEYWORD_POSTS[keyword_id].append(post_id)
 
 def update_keyword_last_fetech_time(result, timestamp):
     '''
     KEYWORD_LAST_FETCH_TIME: dict, {keyword: last_fetch_time}
     '''
-    for r in result:
-        for post_id, info in r.items():
-            keyword_id = info['keyword_id']
-            KEYWORD_LAST_FETCH_TIME[KEYWORD_VALUE[keyword_id]] = timestamp
-
+    for post_id, info in result.items():
+        keyword_id = info['keyword_id']
+        KEYWORD_LAST_FETCH_TIME[KEYWORD_VALUE[keyword_id]] = timestamp
 
 def create_user_notice_info(result):
     '''
