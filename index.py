@@ -21,6 +21,8 @@ from tool.rds import Rds
 from tool.es import Es
 from tool.line import push_message
 from tool.message import format_push_message
+from tool.cache import set_keyword_last_fetch_time
+
 
 config = configparser.ConfigParser()
 with open('settings.ini') as f:
@@ -40,7 +42,6 @@ USER_NOTICED_INFO = {} # 使用者和要通發送的文章和對應關鍵字
 POST_INFO = {} # 文章和細節
 KEYWORD_POSTS = defaultdict(list)  # keyword_id和有該keyword的文章對應
 KEYWORD_VALUE = {} # keyword_id和keyword名的對應
-KEYWORD_LAST_FETCH_TIME = {} # 該keyword被蒐集到的最新時間
 
 loop = asyncio.get_event_loop()
 
@@ -71,7 +72,7 @@ async def main(*, rds, es, is_test=False):
     timestamp = None
     while retry:
         try:
-            result, timestamp = await es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, keyword_last_fetch_time=KEYWORD_LAST_FETCH_TIME, is_test=is_test)
+            result, timestamp = await es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, is_test=is_test)
 
         except elasticsearch.TransportError as e:
             logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
@@ -109,15 +110,15 @@ async def main(*, rds, es, is_test=False):
     logger.debug(USER_NOTICED_INFO)
 
     # 發送訂閱內容
-    messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_POSTS, KEYWORD_VALUE), post_info=POST_INFO, is_test=is_test)
-    logger.debug(messages)
-    tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
+    # messages = format_push_message(user_notice=USER_NOTICED_INFO, keyword_info=(KEYWORD_POSTS, KEYWORD_VALUE), post_info=POST_INFO, is_test=is_test)
+    # logger.debug(messages)
+    # tasks = [asyncio.to_thread(push_message, **{'user_id': user_id, 'message': msg}) for user_id, msg in messages.items()]
 
-    try:
-        result = await asyncio.gather(*tasks)
-    except:
-        logger.error('主動通知失敗')
-        raise
+    # try:
+    #     result = await asyncio.gather(*tasks)
+    # except:
+    #     logger.error('主動通知失敗')
+    #     raise
 
     logger.info(result)
     clean_result()
@@ -146,12 +147,9 @@ def create_post_and_keyword_info(result):
         KEYWORD_POSTS[keyword_id].append(post_id)
 
 def update_keyword_last_fetech_time(result, timestamp):
-    '''
-    KEYWORD_LAST_FETCH_TIME: dict, {keyword: last_fetch_time}
-    '''
     for post_id, info in result.items():
         keyword_id = info['keyword_id']
-        KEYWORD_LAST_FETCH_TIME[KEYWORD_VALUE[keyword_id]] = timestamp
+        set_keyword_last_fetch_time(KEYWORD_VALUE[keyword_id], timestamp)
 
 def create_user_notice_info(result):
     '''
