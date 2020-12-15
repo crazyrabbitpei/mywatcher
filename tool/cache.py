@@ -12,16 +12,16 @@ class Cache:
 
     def get_subcribed_keywords(self, tablename='line_keyword'):
         '''
-        return [(keyword_id, keyword, count), (...)]
+        return [(keyword, count), (...)]
         '''
-        keywords = None
-
+        r = redis.StrictRedis(connection_pool=self.pool)
+        keywords = r.zrange(f'keyword:subcount', 0 , -1, withscores=True)
 
         return keywords
 
     def get_user_keyword_info_to_be_noticed(self, keyword_ids: tuple):
         '''
-        return [(user_id1, keyword_id1), (user_id2, keyword_id2)...]
+        return [(user_id1, keyword_1), (user_id2, keyword_2)...]
         '''
         user_keyword_info = None
 
