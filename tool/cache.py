@@ -15,16 +15,18 @@ class Cache:
         return [(keyword, count), (...)]
         '''
         r = redis.StrictRedis(connection_pool=self.pool)
-        keywords = r.zrange(f'keyword:subcount', 0 , -1, withscores=True)
-
-        return keywords
+        return r.zrange(f'keyword:subcount', 0, -1, withscores=True)
 
     def get_user_keyword_info_to_be_noticed(self, keywords: tuple):
         '''
         return [(user_id1, keyword_1), (user_id2, keyword_2)...]
         '''
-        # TODO
-        user_keyword_info = None
+        print('In cache')
+        r = redis.StrictRedis(connection_pool=self.pool)
+
+        user_keyword_info = []
+        for keyword in keywords:
+            user_keyword_info.extend([(user, keyword) for user in r.smembers(f'keyword_users:{keyword}')])
 
         return user_keyword_info
 

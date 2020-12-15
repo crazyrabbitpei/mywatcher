@@ -95,7 +95,7 @@ async def main(*, es, rds, cache, is_test=False):
 
     # rds查詢關鍵字訂閱者
     try:
-        result = rds.get_user_keyword_info_to_be_noticed(keywords)
+        result = cache.get_user_keyword_info_to_be_noticed(keywords) or rds.get_user_keyword_info_to_be_noticed(keywords)
     except:
         logger.error('搜尋訂閱使用者失敗')
         raise
