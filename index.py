@@ -21,7 +21,7 @@ from tool.rds import Rds
 from tool.es import Es
 from tool.line import push_message
 from tool.message import format_push_message
-from tool.cache import set_keyword_last_fetch_time
+from tool.cache import Cache
 
 
 config = configparser.ConfigParser()
@@ -46,7 +46,7 @@ KEYWORD_VALUE = {} # keyword_id和keyword名的對應
 loop = asyncio.get_event_loop()
 
 
-async def main(*, rds, es, is_test=False):
+async def main(*, es, rds, cache, is_test=False):
     global KEYWORD_VALUE
 
     # 拿取rds關鍵字清單
@@ -56,9 +56,14 @@ async def main(*, rds, es, is_test=False):
         logging.error('關鍵字拿取失敗')
         raise
     else:
-        keyword_ids, keywords, counts = list((zip(*result)))
-        keyword_infos = tuple(zip(keyword_ids, keywords))
-        KEYWORD_VALUE = dict(keyword_infos)
+        if len(result) > 0:
+            keyword_ids, keywords, counts = list((zip(*result)))
+            keyword_infos = tuple(zip(keyword_ids, keywords))
+            KEYWORD_VALUE = dict(keyword_infos)
+        else:
+            clean_result()
+            await asyncio.sleep(int(config['WATCHER']['interval']))
+            return
 
     if is_test:
         keyword_infos = (keyword_infos[0], )
@@ -83,7 +88,7 @@ async def main(*, rds, es, is_test=False):
             raise
         else:
             create_post_and_keyword_info(result)
-            update_keyword_last_fetech_time(result, timestamp)
+            update_keyword_last_fetech_time(cache.result, timestamp)
             retry = False
 
     keyword_ids = tuple(KEYWORD_POSTS.keys())
@@ -146,10 +151,10 @@ def create_post_and_keyword_info(result):
         keyword_id = info['keyword_id']
         KEYWORD_POSTS[keyword_id].append(post_id)
 
-def update_keyword_last_fetech_time(result, timestamp):
+def update_keyword_last_fetech_time(cache, result, timestamp):
     for post_id, info in result.items():
         keyword_id = info['keyword_id']
-        set_keyword_last_fetch_time(KEYWORD_VALUE[keyword_id], timestamp)
+        cache.set_keyword_last_fetch_time(KEYWORD_VALUE[keyword_id], timestamp)
 
 def create_user_notice_info(result):
     '''
@@ -164,10 +169,7 @@ def create_user_notice_info(result):
             USER_NOTICED_INFO[user_id][post_id].append(keyword_id)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--test', action='store_true', help='測試模式狀態會隨便拿取一個keyword並且拿取最近前五篇文章(不會搜尋該keyword)，發送通知對象會是開發者的line。會忽略ssl驗證')
-    args = parser.parse_args()
+def build_connections():
     try:
         rds = Rds(host=os.getenv('RDS_HOST'), dbname=os.getenv('RDS_DBNAME'), user=os.getenv(
             'RDS_USER'), password=os.getenv('RDS_PASSWD'))
@@ -177,15 +179,37 @@ if __name__ == '__main__':
 
     try:
         auth = Auth.get()
-        es = Es(auth=auth, hosts=os.getenv('ES_HOSTS').split(','), port=os.getenv('ES_PORT'), region=os.getenv('ES_REGION'), is_test=args.test)
+        es = Es(auth=auth, hosts=os.getenv('ES_HOSTS').split(','), port=os.getenv(
+            'ES_PORT'), region=os.getenv('ES_REGION'), is_test=args.test)
     except:
         logging.error('es連線失敗', exc_info=True)
         sys.exit(0)
 
+    try:
+        cache = Cache(url=os.getenv('REDIS_URL'))
+    except:
+        logging.error('redis連線失敗', exc_info=True)
+        sys.exit(0)
+
+    return {
+        'rds': rds,
+        'es': es,
+        'cache': cache,
+    }
+
+def close_connections(rds, es, cache):
+    rds.close()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', action='store_true', help='測試模式狀態會隨便拿取一個keyword並且拿取最近前五篇文章(不會搜尋該keyword)，發送通知對象會是開發者的line。會忽略ssl驗證')
+    args = parser.parse_args()
+    connections = build_connections()
+
     now = None
     while True:
         try:
-            loop.run_until_complete(main(rds=rds, es=es, is_test=args.test))
+            loop.run_until_complete(main(**connections, is_test=args.test))
             #asyncio.run(main(rds=rds, es=es))
         except:
             logger.error('系統運行失敗', exc_info=True)
@@ -195,4 +219,5 @@ if __name__ == '__main__':
             break
 
     loop.close()
-    rds.close()
+    close_connections(**connections)
+
