@@ -61,7 +61,7 @@ async def main(*, es, rds, cache, is_test=False):
             await asyncio.sleep(int(config['WATCHER']['interval']))
             return
 
-    logger.debug(f'search: {keywords}')
+    logger.debug(f'search: {result}')
     if is_test:
         logger.warning(f'目前為測試模式，拿最近前5篇文章')
 
