@@ -21,7 +21,6 @@ class Cache:
         '''
         return [(user_id1, keyword_1), (user_id2, keyword_2)...]
         '''
-        print('In cache')
         r = redis.StrictRedis(connection_pool=self.pool)
 
         user_keyword_info = []
