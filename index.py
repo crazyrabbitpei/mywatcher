@@ -88,7 +88,7 @@ async def main(*, es, rds, cache, is_test=False):
             raise
         else:
             create_post_and_keyword_info(result)
-            update_keyword_last_fetech_time(cache.result, timestamp)
+            update_keyword_last_fetech_time(cache, result, timestamp)
             retry = False
 
     keyword_ids = tuple(KEYWORD_POSTS.keys())
