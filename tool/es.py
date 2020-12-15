@@ -39,11 +39,11 @@ class Es:
             retry_on_timeout=True
         )
 
-    async def find(self, *, cache, index, keyword_infos, is_test=False):
+    async def find(self, *, cache, index, keywords, is_test=False):
         '''
-        return [{post_id: {category, title, time, url, keyword_id}}, {}]
+        return [{post_id: {category, title, time, url, keyword}}, {}]
         '''
-        body = gen_body(cache=cache, index=index, keywords=list(zip(*keyword_infos))[1], is_test=is_test)
+        body = gen_body(cache=cache, index=index, keywords=keywords, is_test=is_test)
 
         now = datetime.now()
         tw_now = now.astimezone(tw_tz)
@@ -54,7 +54,7 @@ class Es:
             logger.error(f'搜尋失敗: {json.dumps(body, ensure_ascii=False)}')
             raise
 
-        data = tuple(zip(result['responses'], keyword_infos))
+        data = tuple(zip(result['responses'], keywords))
         try:
             result = parse_post_basic_info(data)
         except:
