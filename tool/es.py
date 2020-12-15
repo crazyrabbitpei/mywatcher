@@ -1,5 +1,5 @@
 from .ptt import parse_post_basic_info
-from .cache import get_keyword_last_fetch_time
+from .cache import Cache
 from elasticsearch import Elasticsearch, AsyncElasticsearch, RequestsHttpConnection, AIOHttpConnection, TransportError
 import boto3
 import pytz
@@ -39,17 +39,17 @@ class Es:
             retry_on_timeout=True
         )
 
-    async def find(self, *, index, keyword_infos, is_test=False):
+    async def find(self, *, cache, index, keyword_infos, is_test=False):
         '''
         return [{post_id: {category, title, time, url, keyword_id}}, {}]
         '''
-        body = gen_body(index=index, keywords=list(zip(*keyword_infos))[1], is_test=is_test)
+        body = gen_body(cache=cache, index=index, keywords=list(zip(*keyword_infos))[1], is_test=is_test)
 
         now = datetime.now()
         tw_now = now.astimezone(tw_tz)
         now = tw_now.isoformat()
         try:
-            result = await self.client.msearch(index=index, body=body, max_concurrent_shard_requests=1)
+            result = await self.client.msearch(index=index, body=body)
         except TransportError as e:
             logger.error(f'搜尋失敗: {json.dumps(body, ensure_ascii=False)}')
             raise
@@ -64,7 +64,7 @@ class Es:
         return result, now
 
 
-def gen_body(*, index, keywords, is_test):
+def gen_body(*, cache, index, keywords, is_test):
     last_time = 'now-1d'
     if is_test:
         myindex = {'index': index}
@@ -86,7 +86,7 @@ def gen_body(*, index, keywords, is_test):
     body = ''
     for keyword in keywords:
         # 該關鍵字有上一次蒐集結果，此次搜尋範圍為上一次搜尋時間之後
-        last_time = get_keyword_last_fetch_time(keyword) or last_time
+        last_time = cache.get_keyword_last_fetch_time(keyword) or last_time
 
         myindex = {'index': index}
         myquery = {

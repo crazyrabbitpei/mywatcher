@@ -77,7 +77,7 @@ async def main(*, es, rds, cache, is_test=False):
     timestamp = None
     while retry:
         try:
-            result, timestamp = await es.find(index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, is_test=is_test)
+            result, timestamp = await es.find(cache=cache, index=os.getenv('ES_INDEX'), keyword_infos=keyword_infos, is_test=is_test)
 
         except elasticsearch.TransportError as e:
             logger.error(f"搜尋失敗, {e.error}: {e.status_code}, {json.dumps(e.info)}")
