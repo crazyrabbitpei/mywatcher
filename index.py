@@ -61,11 +61,10 @@ async def main(*, es, rds, cache, is_test=False):
             await asyncio.sleep(int(config['WATCHER']['interval']))
             return
 
-    if is_test:
-        keywords = keywords[0]
-        logger.warning(f'目前為測試模式, 會隨便拿一個keyword，實際上也並不會用此key去搜尋文章內容，而是拿最近前5篇文章')
-
     logger.debug(f'search: {keywords}')
+    if is_test:
+        logger.warning(f'目前為測試模式，拿最近前5篇文章')
+
 
     # es查詢關鍵字結果
     retry = True
