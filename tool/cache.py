@@ -43,3 +43,7 @@ class Cache:
     def refresh_keyword_last_fetch_time_ttl(self, keyword):
         r = redis.StrictRedis(connection_pool=self.pool)
         r.expire(f'last_fetch_time:{keyword}', GLOBAL_KEYWORD_TTL)
+
+    def get_publish_subscribe(self):
+        r = redis.StrictRedis(connection_pool=self.pool)
+        return r.pubsub()

@@ -58,7 +58,6 @@ async def main(*, es, rds, cache, is_test=False):
             keywords, counts = list((zip(*result)))
         else:
             clean_result()
-            await asyncio.sleep(int(config['WATCHER']['interval']))
             return
 
     logger.debug(f'search: {result}')
@@ -90,7 +89,6 @@ async def main(*, es, rds, cache, is_test=False):
     # 沒有任何關鍵字結果
     if len(keywords) == 0:
         clean_result()
-        await asyncio.sleep(int(config['WATCHER']['interval']))
         return
 
     # rds查詢關鍵字訂閱者
@@ -121,7 +119,8 @@ async def main(*, es, rds, cache, is_test=False):
 
     logger.info(result)
     clean_result()
-    await asyncio.sleep(int(config['WATCHER']['interval']))
+    #await asyncio.sleep(int(config['WATCHER']['interval']))
+    return
 
 
 def clean_result():
@@ -161,7 +160,7 @@ def create_user_notice_info(result):
             USER_NOTICED_INFO[user_id][post_id].append(keyword)
 
 
-def build_connections():
+def build_connections(args):
     try:
         rds = Rds(host=os.getenv('RDS_HOST'), dbname=os.getenv('RDS_DBNAME'), user=os.getenv(
             'RDS_USER'), password=os.getenv('RDS_PASSWD'))
@@ -196,13 +195,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', action='store_true', help='測試模式狀態會隨便拿取一個keyword並且拿取最近前五篇文章(不會搜尋該keyword)，發送通知對象會是開發者的line。會忽略ssl驗證')
     args = parser.parse_args()
-    connections = build_connections()
+    connections = build_connections(args)
 
+    sub = connections['cache'].get_publish_subscribe()
+    sub.subscribe('crawler_status')
     now = None
-    while True:
+    for message in sub.listen():
+        if message['data'] != 'new':
+            continue
         try:
             loop.run_until_complete(main(**connections, is_test=args.test))
-            #asyncio.run(main(rds=rds, es=es))
         except:
             logger.error('系統運行失敗', exc_info=True)
             break
