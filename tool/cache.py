@@ -19,10 +19,11 @@ class Cache:
 
         return keywords
 
-    def get_user_keyword_info_to_be_noticed(self, keyword_ids: tuple):
+    def get_user_keyword_info_to_be_noticed(self, keywords: tuple):
         '''
         return [(user_id1, keyword_1), (user_id2, keyword_2)...]
         '''
+        # TODO
         user_keyword_info = None
 
         return user_keyword_info

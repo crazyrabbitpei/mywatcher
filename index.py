@@ -49,7 +49,7 @@ async def main(*, es, rds, cache, is_test=False):
 
     # 拿取rds關鍵字清單
     try:
-        result = rds.get_subcribed_keywords()
+        result = cache.get_subcribed_keywords() or rds.get_subcribed_keywords()
     except:
         logging.error('關鍵字拿取失敗')
         raise
